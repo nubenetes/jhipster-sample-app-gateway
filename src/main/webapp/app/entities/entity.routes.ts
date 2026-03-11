@@ -11,6 +11,11 @@ const routes: Routes = [
     data: { pageTitle: 'BankAccounts' },
     loadChildren: () => import('./jhipsterSampleMicroservice/bank-account/bank-account.routes'),
   },
+  {
+    path: 'user-management',
+    data: { pageTitle: 'UserManagements' },
+    loadChildren: () => import('./admin/user-management/user-management.routes'),
+  },
   /* jhipster-needle-add-entity-route - JHipster will add entity modules routes here */
 ];
 
