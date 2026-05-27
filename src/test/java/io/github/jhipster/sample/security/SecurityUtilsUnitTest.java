@@ -20,7 +20,7 @@ import reactor.util.context.Context;
 class SecurityUtilsUnitTest {
 
     @Test
-    void testgetCurrentUserLogin() {
+    void testGetCurrentUserLogin() {
         String login = SecurityUtils.getCurrentUserLogin()
             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(new UsernamePasswordAuthenticationToken("admin", "admin")))
             .block();
@@ -28,11 +28,23 @@ class SecurityUtilsUnitTest {
     }
 
     @Test
-    void testgetCurrentUserJWT() {
+    void testGetCurrentUserJWT() {
         String jwt = SecurityUtils.getCurrentUserJWT()
             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(new UsernamePasswordAuthenticationToken("admin", "token")))
             .block();
         assertThat(jwt).isEqualTo("token");
+    }
+
+    @Test
+    void testGetCurrentUserJWTFromJwtCredentials() {
+        var now = Instant.now();
+        var jwt = Jwt.withTokenValue("token").issuedAt(now).expiresAt(now.plusSeconds(60)).header("Test", "test").build();
+
+        String currentUserJwt = SecurityUtils.getCurrentUserJWT()
+            .contextWrite(ReactiveSecurityContextHolder.withAuthentication(new UsernamePasswordAuthenticationToken("admin", jwt)))
+            .block();
+
+        assertThat(currentUserJwt).isEqualTo("token");
     }
 
     @Test

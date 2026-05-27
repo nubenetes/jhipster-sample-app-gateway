@@ -1,6 +1,6 @@
 package io.github.jhipster.sample.security;
 
-import java.util.Arrays;
+import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -56,8 +56,16 @@ public final class SecurityUtils {
     public static Mono<String> getCurrentUserJWT() {
         return ReactiveSecurityContextHolder.getContext()
             .map(SecurityContext::getAuthentication)
-            .filter(authentication -> authentication.getCredentials() instanceof String)
-            .map(authentication -> (String) authentication.getCredentials());
+            .flatMap(authentication -> Mono.justOrEmpty(extractCredentials(authentication)));
+    }
+
+    private static String extractCredentials(Authentication authentication) {
+        if (authentication.getCredentials() instanceof String token) {
+            return token;
+        } else if (authentication.getCredentials() instanceof Jwt jwt) {
+            return jwt.getTokenValue();
+        }
+        return null;
     }
 
     /**
@@ -99,7 +107,7 @@ public final class SecurityUtils {
                 authorityList
                     .stream()
                     .map(GrantedAuthority::getAuthority)
-                    .anyMatch(authority -> Arrays.asList(authorities).contains(authority))
+                    .anyMatch(authority -> List.of(authorities).contains(authority))
             );
     }
 

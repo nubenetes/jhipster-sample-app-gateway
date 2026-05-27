@@ -120,7 +120,13 @@ class UserRepositoryInternalImpl implements UserRepositoryInternal {
             .sql("DELETE FROM jhi_user_authority WHERE user_id = :userId")
             .bind("userId", user.getId())
             .then()
-            .then(r2dbcEntityTemplate.delete(User.class).matching(query(where("id").is(user.getId()))).all().then());
+            .then(
+                r2dbcEntityTemplate
+                    .delete(User.class)
+                    .matching(query(where("id").is(user.getId())))
+                    .all()
+                    .then()
+            );
     }
 
     private Mono<User> findOneWithAuthoritiesBy(String fieldName, Object fieldValue) {

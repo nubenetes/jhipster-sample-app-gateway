@@ -89,9 +89,16 @@ server:
 # ===================================================================
 
 jhipster:
+  gateway:
+    rate-limiting:
+      enabled: false
   http:
     cache: # Used by the CachingHttpHeadersFilter
       timeToLiveInDays: 1461
+  cache: # Cache configuration
+    hazelcast: # Hazelcast distributed cache
+      time-to-live-seconds: 3600
+      backup-count: 1
   security:
     authentication:
       jwt:

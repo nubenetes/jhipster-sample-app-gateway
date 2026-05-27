@@ -1,10 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { Observable } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { Observable, finalize } from 'rxjs';
 
 import { AlertError } from 'app/shared/alert/alert-error';
 import { IBankAccount } from '../bank-account.model';
@@ -13,6 +12,7 @@ import { BankAccountService } from '../service/bank-account.service';
 import { BankAccountFormGroup, BankAccountFormService } from './bank-account-form.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'jhi-bank-account-update',
   templateUrl: './bank-account-update.html',
   imports: [FontAwesomeModule, AlertError, ReactiveFormsModule],

@@ -5,8 +5,8 @@ import io.github.jhipster.sample.config.CRLFLogConverter;
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class JhipsterSampleGatewayApp {
      */
     @PostConstruct
     public void initApplication() {
-        Collection<String> activeProfiles = Arrays.asList(env.getActiveProfiles());
+        Collection<String> activeProfiles = List.of(env.getActiveProfiles());
         if (
             activeProfiles.contains(JHipsterConstants.SPRING_PROFILE_DEVELOPMENT) &&
             activeProfiles.contains(JHipsterConstants.SPRING_PROFILE_PRODUCTION)
@@ -66,6 +66,21 @@ public class JhipsterSampleGatewayApp {
      * @param args the command line arguments.
      */
     public static void main(String[] args) {
+        try {
+            // Workaround Hazelcast issue: https://github.com/hazelcast/hazelcast/issues/26361#issuecomment-2489778475
+            Class.forName(
+                "org.springframework.boot.devtools.autoconfigure.DevToolsProperties",
+                false,
+                SpringApplication.class.getClassLoader()
+            );
+            System.setProperty("spring.devtools.restart.enabled", "false");
+            LOG.warn(
+                "Spring Boot Developer Tools restart has been disabled using System property in order to prevent issues with Hazelcast"
+            );
+        } catch (Exception e) {
+            // Devtools not found, ignore
+        }
+
         var app = new SpringApplication(JhipsterSampleGatewayApp.class);
         DefaultProfileUtil.addDefaultProfile(app);
         Environment env = app.run(args).getEnvironment();

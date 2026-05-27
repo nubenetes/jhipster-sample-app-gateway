@@ -52,24 +52,20 @@ public class AuthorityResource {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<Authority>> createAuthority(@Valid @RequestBody Authority authority) throws URISyntaxException {
         LOG.debug("REST request to save Authority : {}", authority);
-        return authorityRepository
-            .existsById(authority.getName())
-            .flatMap(exists -> {
-                if (exists) {
-                    return Mono.error(new BadRequestAlertException("authority already exists", ENTITY_NAME, "idexists"));
+        return authorityRepository.existsById(authority.getName()).flatMap(exists -> {
+            if (exists) {
+                return Mono.error(new BadRequestAlertException("authority already exists", ENTITY_NAME, "idexists"));
+            }
+            return authorityRepository.save(authority).map(result -> {
+                try {
+                    return ResponseEntity.created(new URI("/api/authorities/" + result.getName()))
+                        .headers(HeaderUtil.createEntityCreationAlert(applicationName, false, ENTITY_NAME, result.getName()))
+                        .body(result);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
                 }
-                return authorityRepository
-                    .save(authority)
-                    .map(result -> {
-                        try {
-                            return ResponseEntity.created(new URI("/api/authorities/" + result.getName()))
-                                .headers(HeaderUtil.createEntityCreationAlert(applicationName, false, ENTITY_NAME, result.getName()))
-                                .body(result);
-                        } catch (URISyntaxException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
             });
+        });
     }
 
     /**
@@ -121,6 +117,7 @@ public class AuthorityResource {
         LOG.debug("REST request to delete Authority : {}", id);
         return authorityRepository
             .deleteById(id)
+
             .then(
                 Mono.just(
                     ResponseEntity.noContent()

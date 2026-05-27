@@ -15,7 +15,7 @@ describe('UserManagement e2e test', () => {
   const userManagementPageUrlPattern = new RegExp('/user-management(\\?.*)?$');
   let username: string;
   let password: string;
-  const userManagementSample = { login: 'Gerard.Stanton14', email: 'Nakia_Kling@gmail.com' };
+  const userManagementSample = { login: 'Gary.Stanton14', email: 'Mozelle_Kling@gmail.com' };
 
   let userManagement;
 
@@ -166,17 +166,17 @@ describe('UserManagement e2e test', () => {
     });
 
     it('should create an instance of UserManagement', () => {
-      cy.get(`[data-cy="login"]`).type('Niko.Renner26');
-      cy.get(`[data-cy="login"]`).should('have.value', 'Niko.Renner26');
+      cy.get(`[data-cy="login"]`).type('Nestor.Renner26');
+      cy.get(`[data-cy="login"]`).should('have.value', 'Nestor.Renner26');
 
-      cy.get(`[data-cy="firstName"]`).type('Jimmie');
-      cy.get(`[data-cy="firstName"]`).should('have.value', 'Jimmie');
+      cy.get(`[data-cy="firstName"]`).type('Jessika');
+      cy.get(`[data-cy="firstName"]`).should('have.value', 'Jessika');
 
       cy.get(`[data-cy="lastName"]`).type('Crist');
       cy.get(`[data-cy="lastName"]`).should('have.value', 'Crist');
 
-      cy.get(`[data-cy="email"]`).type('Lurline77@hotmail.com');
-      cy.get(`[data-cy="email"]`).should('have.value', 'Lurline77@hotmail.com');
+      cy.get(`[data-cy="email"]`).type('Lucie77@hotmail.com');
+      cy.get(`[data-cy="email"]`).should('have.value', 'Lucie77@hotmail.com');
 
       cy.get(`[data-cy="activated"]`).should('be.checked');
       cy.get(`[data-cy="activated"]`).click();

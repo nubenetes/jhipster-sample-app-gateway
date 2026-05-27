@@ -4,12 +4,15 @@ import io.github.jhipster.sample.IntegrationTest;
 import io.github.jhipster.sample.domain.User;
 import io.github.jhipster.sample.repository.UserRepository;
 import io.github.jhipster.sample.security.AuthoritiesConstants;
+import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -26,6 +29,9 @@ class PublicUserResourceIT {
     private UserRepository userRepository;
 
     @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
     private WebTestClient webTestClient;
 
     private User user;
@@ -37,6 +43,12 @@ class PublicUserResourceIT {
 
     @AfterEach
     void cleanupAndCheck() {
+        cacheManager
+            .getCacheNames()
+            .stream()
+            .map(cacheName -> this.cacheManager.getCache(cacheName))
+            .filter(Objects::nonNull)
+            .forEach(Cache::clear);
         userRepository.deleteAllUserAuthorities().block();
         userRepository.deleteAll().block();
     }
@@ -57,9 +69,9 @@ class PublicUserResourceIT {
             .expectHeader()
             .contentType(MediaType.APPLICATION_JSON)
             .expectBody()
-            .jsonPath(String.format("$.[?(@.id == %d)].login", user.getId()))
+            .jsonPath("$.[?(@.id == %d)].login".formatted(user.getId()))
             .isEqualTo(user.getLogin())
-            .jsonPath(String.format("$.[?(@.id == %d)].keys()", user.getId()))
+            .jsonPath("$.[?(@.id == %d)].keys()".formatted(user.getId()))
             .isEqualTo(Set.of("id", "login"))
             .jsonPath("$.[*].email")
             .doesNotHaveJsonPath()

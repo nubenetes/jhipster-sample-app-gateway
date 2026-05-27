@@ -19,16 +19,14 @@ import tech.jhipster.config.JHipsterProperties;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import(
-    {
-        JHipsterProperties.class,
-        WebConfigurer.class,
-        SecurityConfiguration.class,
-        SecurityJwtConfiguration.class,
-        SecurityMetersService.class,
-        JwtAuthenticationTestUtils.class,
-    }
-)
+@Import({
+    JHipsterProperties.class,
+    WebConfigurer.class,
+    SecurityConfiguration.class,
+    SecurityJwtConfiguration.class,
+    SecurityMetersService.class,
+    JwtAuthenticationTestUtils.class,
+})
 @WebFluxTest(
     controllers = { AuthenticateController.class },
     properties = {
