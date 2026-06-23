@@ -12,7 +12,11 @@ spec:
   taskRunTemplate:
     serviceAccountName: tekton-ci
   pipelineRef:
-    name: microservices-pipeline
+    resolver: cluster
+    params:
+      - {name: kind, value: pipeline}
+      - {name: name, value: microservices-pipeline}
+      - {name: namespace, value: tekton-ci}
   params:
     - {name: service-name, value: "gateway"}
     - {name: service-type, value: "java"}
