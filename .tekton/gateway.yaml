@@ -11,6 +11,11 @@ metadata:
 spec:
   taskRunTemplate:
     serviceAccountName: tekton-ci
+  # Resolve the in-cluster Pipeline via the cluster resolver. A bare
+  # 'pipelineRef: {name: ...}' makes Pipelines-as-Code try to fetch the Pipeline
+  # from the git repo (it's not in .tekton/) and fail with "cannot find referenced
+  # pipeline". The cluster resolver defers resolution to Tekton at runtime, reading
+  # microservices-pipeline (and its Tasks) from the tekton-ci namespace.
   pipelineRef:
     resolver: cluster
     params:
