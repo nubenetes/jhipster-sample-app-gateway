@@ -35,7 +35,7 @@ spec:
     - {name: image, value: "ghcr.io/nubenetes/jenkins-2026-microservices/gateway:{{ revision }}"}
     - {name: registry-host, value: "ghcr.io"}
     - {name: self-repo-url, value: "https://github.com/nubenetes/jenkins-2026.git"}
-    - {name: self-repo-branch, value: "main"}
+    - {name: self-repo-branch, value: "develop"}
     - {name: otlp-endpoint, value: "http://otel-collector-gateway.observability.svc.cluster.local:4317"}
   workspaces:
     - name: source
