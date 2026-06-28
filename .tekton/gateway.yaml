@@ -8,6 +8,13 @@ metadata:
     pipelinesascode.tekton.dev/on-event: "[push, pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"
+    jenkins2026.io/url-microservices: "https://microservices.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-microservices-develop: "https://microservices-develop.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-tekton-dashboard: "https://tekton.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-argocd: "https://argocd.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-headlamp: "https://headlamp.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-pgadmin: "https://pgadmin.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-grafana: "https://grafana.jenkins2026.nubenetes.com"
 spec:
   taskRunTemplate:
     serviceAccountName: tekton-ci
