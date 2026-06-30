@@ -38,7 +38,7 @@
     "packageFolder": "io/github/jhipster/sample/",
     "packageName": "io.github.jhipster.sample",
     "pages": [],
-    "prodDatabaseType": "mysql",
+    "prodDatabaseType": "postgresql",
     "reactive": true,
     "searchEngine": false,
     "serverPort": "8080",
