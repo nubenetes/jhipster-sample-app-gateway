@@ -4,15 +4,12 @@ import io.github.jhipster.sample.IntegrationTest;
 import io.github.jhipster.sample.domain.User;
 import io.github.jhipster.sample.repository.UserRepository;
 import io.github.jhipster.sample.security.AuthoritiesConstants;
-import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -28,8 +25,6 @@ class PublicUserResourceIT {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private CacheManager cacheManager;
 
     @Autowired
     private WebTestClient webTestClient;
@@ -43,12 +38,6 @@ class PublicUserResourceIT {
 
     @AfterEach
     void cleanupAndCheck() {
-        cacheManager
-            .getCacheNames()
-            .stream()
-            .map(cacheName -> this.cacheManager.getCache(cacheName))
-            .filter(Objects::nonNull)
-            .forEach(Cache::clear);
         userRepository.deleteAllUserAuthorities().block();
         userRepository.deleteAll().block();
     }
