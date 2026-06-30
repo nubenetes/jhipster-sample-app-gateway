@@ -43,6 +43,13 @@ jobs:
           ref: ${{ env.INFRA_BRANCH }}
           path: infra
 
+      # The 'gateway' fork is the upstream JHipster sample (MySQL); the platform runs Postgres. The
+      # shared patch (single source of truth) converts it to Postgres + a NoOp cache at build time.
+      # No-op for other services. ITs are skipped (-DskipITs in Build & test), like the other engines.
+      - name: Patch gateway app source (shared)
+        if: env.SERVICE == 'gateway'
+        run: bash "${{ github.workspace }}/infra/resources/patch-app-source.sh" "$SERVICE" "${{ github.workspace }}/microservices-src"
+
       # ARC ephemeral runners (ghcr.io/actions/actions-runner) are MINIMAL — unlike
       # GitHub-hosted ubuntu-latest they ship NO JDK, so a bare `./mvnw` fails with
       # "JAVA_HOME is not defined". Install the same Temurin major the other engines'
@@ -105,7 +112,10 @@ jobs:
           [ -n "$MODULE" ] && [ -d "$MODULE" ] && cd "$MODULE"
           if [ "$SERVICE_TYPE" = "java" ]; then
             export MAVEN_OPTS="-Xmx2048m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
-            ./mvnw -B -ntp -s "${{ github.workspace }}/infra/jenkins/maven-settings.xml" clean verify
+            # -DskipITs: run unit tests, skip the heavy Integration Tests (DB testcontainer) —
+            # identical to the other engines (tekton/tasks/maven-build-test.yaml), and it keeps
+            # the gateway's test-side DB config (testcontainer/changelogs) out of the build path.
+            ./mvnw -B -ntp -s "${{ github.workspace }}/infra/jenkins/maven-settings.xml" -DskipITs clean verify
           else
             npm ci && npm run build
           fi
