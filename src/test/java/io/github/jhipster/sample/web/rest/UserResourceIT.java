@@ -20,6 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -67,6 +69,8 @@ class UserResourceIT {
     @Autowired
     private EntityManager em;
 
+    @Autowired
+    private CacheManager cacheManager;
 
     @Autowired
     private WebTestClient webTestClient;
@@ -117,6 +121,12 @@ class UserResourceIT {
     void cleanupAndCheck() {
         userRepository.deleteAllUserAuthorities().block();
         userRepository.deleteAll().block();
+        cacheManager
+            .getCacheNames()
+            .stream()
+            .map(cacheName -> this.cacheManager.getCache(cacheName))
+            .filter(Objects::nonNull)
+            .forEach(Cache::invalidate);
     }
 
     @Test
@@ -274,6 +284,7 @@ class UserResourceIT {
         // Initialize the database
         userRepository.save(user).block();
 
+        assertThat(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).get(user.getLogin(), User.class)).isNull();
 
         // Get the user
         webTestClient
@@ -298,6 +309,7 @@ class UserResourceIT {
             .jsonPath("$.langKey")
             .isEqualTo(DEFAULT_LANGKEY);
 
+        assertThat(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).get(user.getLogin(), User.class)).isNotNull();
     }
 
     @Test
@@ -509,6 +521,7 @@ class UserResourceIT {
             .expectStatus()
             .isNoContent();
 
+        assertThat(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE).get(user.getLogin(), User.class)).isNull();
 
         // Validate the database is empty
         assertPersistedUsers(users -> assertThat(users).hasSize(databaseSizeBeforeDelete - 1));

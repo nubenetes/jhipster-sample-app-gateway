@@ -66,14 +66,14 @@ spring:
   liquibase:
     # Remove 'faker' if you do not want the sample data to be loaded automatically
     contexts: dev, faker
-    url: jdbc:h2:file:./target/h2db/db/jhipsterSampleGateway;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    url: jdbc:h2:file:./target/h2db/db/jhipsterSampleGateway;DB_CLOSE_DELAY=-1;MODE=MYSQL
   mail:
     host: localhost
     port: 25
   messages:
     cache-duration: PT1S # 1 second, see the ISO 8601 standard
   r2dbc:
-    url: r2dbc:h2:file:///./target/h2db/db/jhipsterSampleGateway;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    url: r2dbc:h2:file:///./target/h2db/db/jhipsterSampleGateway;DB_CLOSE_DELAY=-1;MODE=MYSQL
   thymeleaf:
     cache: false
 
