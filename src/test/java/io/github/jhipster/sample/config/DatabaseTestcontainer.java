@@ -5,14 +5,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.testcontainers.containers.JdbcDatabaseContainer;
-import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 
 public class DatabaseTestcontainer implements SqlTestContainer, InitializingBean, DisposableBean {
 
     private static final Logger LOG = LoggerFactory.getLogger(DatabaseTestcontainer.class);
 
-    private MySQLContainer<?> databaseContainer;
+    private PostgreSQLContainer<?> databaseContainer;
 
     @Override
     public void destroy() {
@@ -24,9 +24,8 @@ public class DatabaseTestcontainer implements SqlTestContainer, InitializingBean
     @Override
     public void afterPropertiesSet() {
         if (null == databaseContainer) {
-            databaseContainer = (MySQLContainer) new MySQLContainer<>("mysql:9.7.0")
+            databaseContainer = (PostgreSQLContainer) new PostgreSQLContainer<>("postgres:16-alpine")
                 .withDatabaseName("jhipsterSampleGateway")
-                .withConfigurationOverride("conf/mysql")
                 .withLogConsumer(new Slf4jLogConsumer(LOG))
                 .withReuse(true);
         }
