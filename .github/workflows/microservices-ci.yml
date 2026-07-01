@@ -1,0 +1,175 @@
+# DO NOT EDIT IN THE FORK — managed by jenkins-2026 (scripts/06-githubactions-pipelines.sh),
+# rendered from jenkins/pipelines/seed/services.yaml (the SAME service registry Jenkins and
+# Tekton read). ARC dispatches this onto in-cluster ephemeral Spot runners (ci-spot
+# ComputeClass) registered as 'jenkins-2026-runners'. Same 10-stage contract as the other engines.
+# Placeholders ({{...}}) are sed-substituted per service at render time.
+name: microservices-ci
+on:
+  push:
+    branches: [main, develop]      # 'main' (+ 'develop' when the develop track is enabled)
+  pull_request:
+    branches: [main]
+  # Manual 1-click run from the fork's Actions tab ("Run workflow"). This is a BRANCH-BASED
+  # tier model — the branch you pick in "Use workflow from" IS the environment selector:
+  # ENV_NAME / TARGET_NS below derive from github.ref_name, so Run workflow -> develop
+  # builds+deploys the DEVELOP tier (ns microservices-develop), -> main the STABLE tier (ns microservices).
+  # Same trigger the seed uses for githubactions.seedRuns (gh workflow run). See docs/404.
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write          # native SARIF upload (Semgrep + CodeQL)
+  packages: write                 # GHCR push
+concurrency:
+  group: microservices-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-deploy:
+    name: build → scan → push → gitops (gateway)
+    runs-on: jenkins-2026-runners
+    env:
+      SERVICE: "gateway"
+      SERVICE_TYPE: "java"           # java | angular
+      MODULE: ""
+      REGISTRY: "ghcr.io/nubenetes/jenkins-2026-microservices"              # ghcr.io/nubenetes/jenkins-2026-microservices
+      IMAGE_TAG: ${{ github.ref_name }}-${{ github.run_number }}    # <branch>-<run#>, immutable
+      ENV_NAME: ${{ github.ref_name == 'develop' && 'develop' || 'stable' }}
+      TARGET_NS: ${{ github.ref_name == 'develop' && 'microservices-develop' || 'microservices' }}
+      INFRA_BRANCH: "main"
+      OTLP_ENDPOINT: "http://otel-collector-gateway.observability.svc.cluster.local:4317"
+      OTEL_SERVICE_NAME: "githubactions-pipeline-gateway"
+    steps:
+      - name: Checkout app (microservices fork)
+        uses: actions/checkout@v4
+        with: { path: microservices-src }
+
+      - name: Checkout infra (semgrep/codeql/trivy configs)
+        uses: actions/checkout@v4
+        with:
+          repository: nubenetes/jenkins-2026
+          ref: ${{ env.INFRA_BRANCH }}
+          path: infra
+
+      # The 'gateway' fork is the upstream JHipster sample (MySQL); the platform runs Postgres. The
+      # shared patch (single source of truth) converts it to Postgres + a NoOp cache at build time.
+      # No-op for other services. ITs are skipped (-DskipITs in Build & test), like the other engines.
+      - name: Patch gateway app source (shared)
+        if: env.SERVICE == 'gateway'
+        run: bash "${{ github.workspace }}/infra/resources/patch-app-source.sh" "$SERVICE" "${{ github.workspace }}/microservices-src"
+
+      # ARC ephemeral runners (ghcr.io/actions/actions-runner) are MINIMAL — unlike
+      # GitHub-hosted ubuntu-latest they ship NO JDK, so a bare `./mvnw` fails with
+      # "JAVA_HOME is not defined". Install the same Temurin major the other engines'
+      # maven:3.9.9-eclipse-temurin-21 image uses, so the build is JDK-identical across
+      # Jenkins / Tekton / Argo Workflows / GitHub Actions. (Also gives CodeQL's Java
+      # autobuild a JDK.) setup-java caches to the runner tool dir, so re-runs are fast.
+      - name: Set up JDK 21 (Temurin)
+        if: env.SERVICE_TYPE == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The minimal ARC runner also lacks yq (the GitOps tag bump below runs it under
+      # `set -eu`) and the argocd CLI (the sync step). Install both, pinned: yq to the repo
+      # standard (v4.53.3, same as Day1), argocd to the running server (v3.4.4) so
+      # `app sync`/`app wait` speak the same API. User-dir install + $GITHUB_PATH — the
+      # actions-runner user has no passwordless sudo, so /usr/local/bin isn't writable.
+      - name: Install CI tools (yq + argocd)
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64 -o "$HOME/.local/bin/yq"
+          curl -fsSL https://github.com/argoproj/argo-cd/releases/download/v3.4.4/argocd-linux-amd64 -o "$HOME/.local/bin/argocd"
+          chmod +x "$HOME/.local/bin/yq" "$HOME/.local/bin/argocd"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Semgrep (SAST) → SARIF
+        run: |
+          docker run --rm -v "${{ github.workspace }}/microservices-src:/src" \
+            returntocorp/semgrep semgrep --config=auto --sarif --output=/src/semgrep.sarif /src || true
+      - name: Upload Semgrep SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: microservices-src/semgrep.sarif, category: semgrep }
+        continue-on-error: true
+
+      - name: CodeQL init
+        if: env.SERVICE_TYPE == 'java'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+          # buildless Java scan: the app lives in microservices-src/ (+ optional MODULE) and
+          # builds with a custom maven-settings.xml, which CodeQL's default autobuild can't
+          # replicate — so it compiled nothing and failed analyze with "no source code seen
+          # during build" (exit 32). build-mode:none extracts the source directly: real SARIF,
+          # and no dependency on the Maven build succeeding (so even a failing app build is scanned).
+          build-mode: none
+      - name: CodeQL analyze
+        if: env.SERVICE_TYPE == 'java'
+        uses: github/codeql-action/analyze@v3
+        continue-on-error: true
+
+      - name: Trivy IaC scan
+        run: |
+          docker run --rm -v "${{ github.workspace }}/microservices-src:/src" \
+            aquasec/trivy config --exit-code 0 /src || true
+
+      - name: Build & test
+        run: |
+          cd microservices-src
+          [ -n "$MODULE" ] && [ -d "$MODULE" ] && cd "$MODULE"
+          if [ "$SERVICE_TYPE" = "java" ]; then
+            export MAVEN_OPTS="-Xmx2048m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+            # -DskipITs: run unit tests, skip the heavy Integration Tests (DB testcontainer) —
+            # identical to the other engines (tekton/tasks/maven-build-test.yaml), and it keeps
+            # the gateway's test-side DB config (testcontainer/changelogs) out of the build path.
+            ./mvnw -B -ntp -s "${{ github.workspace }}/infra/jenkins/maven-settings.xml" -DskipITs clean verify
+          else
+            npm ci && npm run build
+          fi
+
+      - name: Image build & push to GHCR (Jib)
+        if: env.SERVICE_TYPE == 'java'
+        run: |
+          cd microservices-src; [ -n "$MODULE" ] && [ -f "$MODULE/mvnw" ] && cd "$MODULE"
+          export MAVEN_OPTS="-Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+          ./mvnw -B -ntp -Pprod -DskipTests -Dmaven.compiler.maxmem=512m jib:build \
+            -Djib.to.image="$REGISTRY/$SERVICE:$IMAGE_TAG" \
+            -Djib.to.auth.username="${{ secrets.REGISTRY_USERNAME }}" \
+            -Djib.to.auth.password="${{ secrets.REGISTRY_PASSWORD }}" -Djib.serialize=true
+
+      - name: Trivy image scan
+        if: env.SERVICE_TYPE == 'java'
+        run: docker run --rm aquasec/trivy image --exit-code 0 "$REGISTRY/$SERVICE:$IMAGE_TAG" || true
+
+      - name: GitOps image-tag bump (direct push)
+        env: { GIT_USER: "${{ secrets.GIT_USERNAME }}", GIT_TOKEN: "${{ secrets.GIT_TOKEN }}" }
+        run: |
+          set -eu
+          BRANCH=main; [ "$ENV_NAME" = develop ] && BRANCH=develop
+          VALUES="helm/microservices/values-$ENV_NAME.yaml"
+          git clone --depth 1 --branch "$BRANCH" \
+            "https://$GIT_USER:$GIT_TOKEN@github.com/nubenetes/jenkins-2026-gitops-config.git" gitops
+          cd gitops
+          yq eval -i ".services.${SERVICE}.image.tag = \"$IMAGE_TAG\"" "$VALUES"
+          git config user.email "githubactions@nubenetes.com"
+          git config user.name "GitHub Actions CI"
+          git add "$VALUES"
+          git commit -m "chore(ops): update ${SERVICE} image tag to $IMAGE_TAG [$ENV_NAME]" || { echo "No changes"; exit 0; }
+          git push origin "$BRANCH"    # DIRECT push to main — that repo's main is direct-push by design (see CLAUDE.md)
+
+      - name: ArgoCD sync + wait
+        run: |
+          ARGOCD_TOKEN="$(cat /var/run/secrets/arc-argocd/token 2>/dev/null || echo "${{ env.ARGOCD_TOKEN }}")"
+          argocd app sync  "microservices-$ENV_NAME" --auth-token "$ARGOCD_TOKEN" --server argocd-server.argocd.svc.cluster.local --insecure || true
+          argocd app wait  "microservices-$ENV_NAME" --auth-token "$ARGOCD_TOKEN" --server argocd-server.argocd.svc.cluster.local --insecure --timeout 300 || true
+
+      - name: Smoke test
+        run: |
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors \
+            "http://gateway.${TARGET_NS}.svc.cluster.local:8080/management/health" || echo "smoke retry exhausted (non-fatal)"
+
+      - name: Export pipeline OTel trace
+        if: always()
+        run: |
+          # k6/build spans -> the in-cluster collector; k6 tags ci_runner=githubactions so the
+          # existing k6 Grafana dashboards filter the new engine out of the box.
+          echo "OTEL_EXPORTER_OTLP_ENDPOINT=$OTLP_ENDPOINT (service.name=githubactions, ci_runner=githubactions)"
