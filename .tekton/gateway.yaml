@@ -14,6 +14,7 @@ metadata:
     jenkins2026.io/url-argocd: "https://argocd.jenkins2026.nubenetes.com"
     jenkins2026.io/url-headlamp: "https://headlamp.jenkins2026.nubenetes.com"
     jenkins2026.io/url-pgadmin: "https://pgadmin.jenkins2026.nubenetes.com"
+    jenkins2026.io/url-grafana: "https://grafana.jenkins2026.nubenetes.com"
 spec:
   taskRunTemplate:
     serviceAccountName: tekton-ci
