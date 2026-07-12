@@ -9,7 +9,6 @@ metadata:
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"
     jenkins2026.io/url-microservices: "https://microservices.jenkins2026.nubenetes.com"
-    jenkins2026.io/url-microservices-develop: "https://microservices-develop.jenkins2026.nubenetes.com"
     jenkins2026.io/url-tekton-dashboard: "https://tekton.jenkins2026.nubenetes.com"
     jenkins2026.io/url-argocd: "https://argocd.jenkins2026.nubenetes.com"
     jenkins2026.io/url-headlamp: "https://headlamp.jenkins2026.nubenetes.com"
@@ -42,7 +41,7 @@ spec:
     - {name: image, value: "ghcr.io/nubenetes/jenkins-2026-microservices/gateway:{{ revision }}"}
     - {name: registry-host, value: "ghcr.io"}
     - {name: self-repo-url, value: "https://github.com/nubenetes/jenkins-2026.git"}
-    - {name: self-repo-branch, value: "develop"}
+    - {name: self-repo-branch, value: "main"}
     - {name: otlp-endpoint, value: "http://otel-collector-gateway.observability.svc.cluster.local:4317"}
   workspaces:
     - name: source
